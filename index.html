@@ -1,0 +1,270 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Welcome to Phaser</title>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.1.2/dist/phaser.js"></script>
+  </head>
+  <body>
+    
+    
+    <script type='text/javascript'>
+      var config = {
+          type: Phaser.AUTO,
+          width: 800,
+          height: 600,
+          physics: {
+              default: 'arcade',
+              arcade: {
+                  gravity: { y: 300 },
+                  debug: true
+              }
+          },
+          scene: {
+              preload: preload,
+              create: create,
+              update: update
+          }
+      };
+      
+      var game = new Phaser.Game(config);
+      
+      function preload () {
+        this.load.image('ground', './assets/platform.png');
+        this.load.image('sky', './assets/sky.png');
+        this.load.image('star', './assets/star.png');
+        this.load.image('bomb', './assets/bomb.png');
+        this.load.spritesheet('dude',
+            './assets/dude.png',
+            { frameWidth: 32, frameHeight: 48 });
+      };
+    
+    
+    var platforms;
+    var player;
+    var score = 0;
+    var scoreText;
+    var bombs;
+    
+    function create() {
+        
+      sky = this.add.image(400,300,'sky');
+      
+      platforms = this.physics.add.staticGroup();
+      platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+      
+      platforms.create(600, 400, 'ground');
+      platforms.create(50, 250, 'ground');
+      platforms.create(750, 220, 'ground');
+      
+      // dont change this, animations
+      this.anims.create({
+        key: 'left',
+        frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
+        frameRate: 5,
+        repeat: -1
+      });
+
+      this.anims.create({
+        key: 'idle',
+        frames: [ { key: 'dude', frame: 4 } ],
+        frameRate: 3
+      });
+
+      this.anims.create({
+        key: 'right',
+        frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
+        frameRate: 5,
+        repeat: -1
+      });
+      // animations
+        
+     player = this.physics.add.sprite(100, 450, 'dude');
+
+    player.setBounce(0.2);
+    player.setCollideWorldBounds(true);
+   
+    this.physics.add.collider(player, platforms);
+    
+    player.body.setSize(30, 37)
+    player.body.setOffset(0, 10)
+    
+    //this is starting all of the stars, don't change
+    stars = this.physics.add.group({
+      key: 'star',
+      repeat: 11,
+      setXY:{x: 12, y:0, stepX: 70}
+    });
+    
+    this.physics.add.collider(stars, platforms);
+    
+    console.log(stars)
+    console.log(stars.children.entries[0])
+    
+    stars.children.iterate(function(child) {
+      child.alpha = 1
+      child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+      spinStar(child);
+    });
+    
+    cursors = this.input.keyboard.createCursorKeys();
+    // This is going to make sprite inactive and disable/destroy
+    // Star is being removed when touching player
+    this.physics.add.overlap(player, stars, collectStar, null, this);
+    
+    
+    // setting score counter to 0, 16 16 is the XY coordinates
+    //specifying the text font, color, and size
+    scoreText = this.add.text(16, 16, `score: ${score} `, { fontSize:'20px'});
+    
+    bombs = this.physics.add.group(); //initializing bombs as physics group
+    this.physics.add.collider(bombs, platforms);// bombs collide w/ platform
+    this.physics.add.collider(player, bombs, hitBomb, null, this);// when player hits bomb
+    console.log(this.physics.add.collider)
+  }
+  
+  function hitBomb (player, bomb)
+{
+    this.physics.pause();
+    player.setTint(0xff0000);
+    player.anims.play('turn');
+    gameOver = true;
+}
+
+  function collectStar (player, star){
+    // This function
+    // this disables the body
+    star.disableBody(true,true)
+    score += 10; // updating the score
+    scoreText.setText(`score: ${score} `); // updating the score text
+    
+    
+    if (stars.countActive(true) === 0)
+    {
+        stars.children.iterate(function (child) {
+            child.enableBody(true, child.x, 0, true, true);
+        });
+        var x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+        var bomb = bombs.create(x, 16, 'bomb');
+        bomb.setBounce(1);
+        bomb.setCollideWorldBounds(true);
+        bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+        bomb.allowGravity = false;
+
+    }
+    
+  }
+  
+  function spinStar (star) {
+    console.log(star.alpha);
+    console.log(star.angle);
+    star.angle += 10;
+    
+    
+  }
+  
+  function update () {
+    if (cursors.left.isDown) {
+      player.setVelocityX(-160);
+      player.anims.play('left',true);
+    }
+    else if (cursors.right.isDown){
+      player.setVelocityX(160);
+      player.anims.play('right',true);
+    }
+    else{
+      player.setVelocityX(0);
+      player.anims.play('idle');
+    }
+    if(cursors.up.isDown && player.body.touching.down){
+      player.setVelocityY(-330);
+    }
+  }
+    </script>
+    
+    
+    <!--
+    <script>
+      // https://phaser.io/tutorials/making-your-first-phaser-game/index
+      var game = new Phaser.Game(800, 600, Phaser.AUTO, '', {
+        preload: preload,
+        create: create,
+        update: update
+      });
+
+      function preload() {
+            // This is where you load in images, audio, physics settings, user settings
+
+            // This line of code loads a sprite into the world.
+            game.load.image('skeleton', './skeleton.png');
+            
+      }
+
+
+      function create() {
+                 
+            // This line adds a sprite into the world.
+          
+
+       // skeleton sprite code
+          skeleton = game.add.sprite(game.world.centerX, game.world.centerY, 'skeleton');
+          game.physics.enable(skeleton, Phaser.Physics.ARCADE);
+          skeleton.anchor.setTo(0.5);
+          skeleton.health = 100
+          
+           skeleton.inputEnabled = true;
+           skeleton.isBleeding = false;
+          // You can keep track of health,
+          healthText = game.add.text(250, 16, `Health: ${skeleton.health}`, { fill: '#ffffff' });
+            
+          //skeleton.events.onInputDown.add(listener, this);
+          
+         cursors = game.input.keyboard.createCursorKeys();
+        
+            skeleton.moveSprite = function(up,down,left,right) {
+                if (down) {
+                    skeleton.y += 5
+                } else if (up){
+                    skeleton.y -= 5
+                } else if (right) {
+                    skeleton.x += 5
+                } else if (left) {
+                    skeleton.x -= 5
+                }
+            }
+
+
+      }
+      function update() {
+         skeleton.downKey = cursors.down.isDown;
+         skeleton.upKey = cursors.up.isDown;
+         skeleton.rightKey = cursors.right.isDown;
+         skeleton.leftKey = cursors.left.isDown;
+       skeleton.moveSprite(skeleton.upKey,skeleton.downKey,skeleton.leftKey,skeleton.rightKey);
+        
+       decreaseHealth(skeleton)
+
+       
+      }
+
+    function decreaseHealth(skeleton) {
+        if (skeleton.isBleeding) {
+           // If the sprite is bleeding, you can just run the return command and break out of the function.
+            skeleton.isBleeding = false;
+        return skeleton
+        } else {
+            console.log(`Sanity Test ${skeleton}`)
+         
+                // decrease the health by X amount after Y seconds.
+                skeleton.health -=1
+                console.log(skeleton.health);
+
+            skeleton.isBleeding = true;
+            return skeleton
+        }
+    }
+
+    </script>
+    -->
+  </body>
+</html>
